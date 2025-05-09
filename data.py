@@ -13,10 +13,10 @@ def one_hot_tensor(in_grid):
     """Transform the grid into a (max_x, max_y, num_values) sized one hot tensor"""
     in_tensor = torch.tensor(in_grid, dtype=torch.long)
     in_x, in_y = in_tensor.shape
-    padded_tensor = torch.zeros((MAX_X, MAX_Y), dtype=torch.long)
-    padded_tensor[0:in_x, 0:in_y] = in_tensor
-    one_hot = F.one_hot(padded_tensor, NUM_VALUES)
-    return one_hot.permute((2,0,1)).to(torch.float32)
+    one_hot = F.one_hot(in_tensor, NUM_VALUES).permute((2,0,1))
+    padded_tensor = torch.zeros((NUM_VALUES, MAX_X, MAX_Y), dtype=torch.long)
+    padded_tensor[:, 0:in_x, 0:in_y] = one_hot
+    return padded_tensor.to(torch.float32)
 
 class ArcData(Dataset):
 
@@ -36,13 +36,6 @@ class ArcData(Dataset):
         solution = self.solutions[problem]
         return challenge, solution
 
-def make_mask(shape):
-    mask = np.zeros((MAX_X, MAX_Y))
-    x,y = shape
-    mask[0:x,0:y] = 1
-    return mask
-
-
 @dataclass
 class TripletLocation:
     data_idx: str
@@ -61,12 +54,9 @@ class TripletLocation:
         negative = positive.flatten()
         np.random.shuffle(negative)
         negative = negative.reshape(positive.shape)
-        anchor_mask = make_mask(anchor.shape)
-        comp_mask = make_mask(positive.shape)
         return (one_hot_tensor(anchor),
                 one_hot_tensor(positive),
-                one_hot_tensor(negative),
-                anchor_mask, comp_mask)
+                one_hot_tensor(negative))
 
     def big_enough(self, challenges, min_size):
         pair = self.get_pair(challenges)

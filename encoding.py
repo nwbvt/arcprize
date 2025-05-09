@@ -22,25 +22,22 @@ class EncodingModel(nn.Module):
         self.fc = nn.Linear(in_size, fc)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, mask):
+    def forward(self, x):
         for layer in self.layers:
             x = F.relu(layer(x))
         x = self.dropout(x)
-        #x = x.mul(mask)
         x = self.pool(x)
         x = torch.flatten(x, 1)
         return x
 
 def encode(model: nn.Module, batch: tuple, device: str=DEVICE):
-    (anchor, positive, negative, anchor_mask, comp_mask) = batch
+    (anchor, positive, negative) = batch
     anchor = anchor.to(device)
     positive = positive.to(device)
     negative = negative.to(device)
-    anchor_mask = anchor_mask.to(device)
-    comp_mask = comp_mask.to(device)
-    anchor_encoding = model(anchor, anchor_mask)
-    positive_encoding = model(positive, comp_mask)
-    negative_encoding = model(negative, comp_mask)
+    anchor_encoding = model(anchor)
+    positive_encoding = model(positive)
+    negative_encoding = model(negative)
     return anchor_encoding, positive_encoding, negative_encoding
 
 def train_epoch(model: nn.Module, data: d.ArcTriplets, loss_fn: nn.Module, optimizer: optim.Optimizer,
