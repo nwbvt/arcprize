@@ -1,3 +1,4 @@
+import random
 from typing import Type, Callable
 from torch.utils.data import DataLoader, Dataset
 import torch
@@ -9,7 +10,7 @@ DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_av
 
 class EncodingModel(nn.Module):
 
-    def __init__(self, channels, kernels, fc):
+    def __init__(self, channels, kernels, fc, dropout):
         super().__init__()
         self.layers = nn.ModuleList()
         in_size = d.NUM_VALUES
@@ -19,10 +20,12 @@ class EncodingModel(nn.Module):
             in_size = channel
         self.pool = nn.MaxPool2d(d.MAX_X, d.MAX_Y)
         self.fc = nn.Linear(in_size, fc)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, mask):
         for layer in self.layers:
             x = F.relu(layer(x))
+        x = self.dropout(x)
         #x = x.mul(mask)
         x = self.pool(x)
         x = torch.flatten(x, 1)
