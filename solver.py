@@ -21,6 +21,9 @@ class SolvingModel(nn.Module):
 
 def train_mini_model(train_inputs, train_outputs, model, n_epochs=10, lr=0.001, l2=0.01):
     criterion = nn.CrossEntropyLoss()
+    model = model.to(DEVICE)
+    train_inputs = train_inputs.to(DEVICE)
+    train_outputs = train_outputs.to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=l2)
     for i in range(n_epochs):
         preds = model(train_inputs)
