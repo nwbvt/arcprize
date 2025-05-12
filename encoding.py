@@ -8,9 +8,8 @@ import torch.nn.functional as F
 
 DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
-class EncodingModel(nn.Module):
-
-    def __init__(self, channels, kernels, fc, dropout):
+class Encoding(nn.Module):
+    def __init__(self, channels, kernels):
         super().__init__()
         self.layers = nn.ModuleList()
         in_size = d.NUM_VALUES
@@ -18,13 +17,25 @@ class EncodingModel(nn.Module):
             self.layers.append(nn.Conv2d(in_channels=in_size, out_channels=channel,
                                          kernel_size=kernel, padding="same"))
             in_size = channel
-        self.pool = nn.MaxPool2d(d.MAX_X, d.MAX_Y)
-        self.fc = nn.Linear(in_size, fc)
-        self.dropout = nn.Dropout(dropout)
+        self.out_size = in_size
 
     def forward(self, x):
         for layer in self.layers:
             x = F.relu(layer(x))
+        return x
+
+
+class EncodingModel(nn.Module):
+
+    def __init__(self, channels, kernels, fc, dropout):
+        super().__init__()
+        self.encoding = Encoding(channels, kernels)
+        self.pool = nn.MaxPool2d(d.MAX_X, d.MAX_Y)
+        self.fc = nn.Linear(self.encoding.out_size, fc)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        x = self.encoding(x)
         x = self.dropout(x)
         x = self.pool(x)
         x = torch.flatten(x, 1)
@@ -70,7 +81,7 @@ def test(model: nn.Module, data: d.ArcTriplets, loss_fn: nn.Module, batch_size: 
     return loss
 
 def train(model: nn.Module, data: d.ArcTriplets, loss_fn: nn.Module, optimizer: optim.Optimizer,
-          name: str="model", max_epochs: int=100, max_streak: int=5,
+          name: str="encoding_model", max_epochs: int=100, max_streak: int=5,
           seed: int=0, device: str=DEVICE, train_size: float=0.9,
           batch_size:int=128, log:bool=True):
     fname=f"{name}.pth"
