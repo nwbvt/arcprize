@@ -34,7 +34,20 @@ class ArcData(Dataset):
         problem = self.problems[i]
         challenge = self.challenges[problem]
         solution = self.solutions[problem]
-        return challenge, solution
+        train_inputs = []
+        train_outputs = []
+        for example in challenge['train']:
+            train_inputs.append(one_hot_tensor(example['input']))
+            train_outputs.append(one_hot_tensor(example['output']))
+        test_inputs = []
+        test_outputs = []
+        for example in challenge['test']:
+            test_inputs.append(one_hot_tensor(example['input']))
+        for example in solution:
+            test_outputs.append(one_hot_tensor(example))
+
+        return (torch.stack(train_inputs), torch.stack(train_outputs),
+                torch.stack(test_inputs), torch.stack(test_outputs))
 
 @dataclass
 class TripletLocation:
