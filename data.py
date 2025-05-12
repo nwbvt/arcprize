@@ -4,6 +4,8 @@ import json
 import numpy as np
 import torch
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from matplotlib import colors
 
 MAX_X=30
 MAX_Y=30
@@ -100,3 +102,31 @@ class ArcTriplets(Dataset):
 
     def __getitem__(self, idx):
         return self.triplets[idx].gen_triplet(self.challenges)
+
+CMAP = colors.ListedColormap(['#000000', '#0074D9', '#FF4136', '#2ECC40', '#FFDC00',
+                              '#AAAAAA', '#F012BE', '#FF851B', '#7FDBFF', '#870C25'])
+
+def print_grid(grid, axis, cmap=CMAP):
+    has_values = grid.sum(dim=0)
+    height = int(has_values.sum(dim=0).max().item())
+    width = int(has_values.sum(dim=1).max().item())
+    with_vals = grid.argmax(dim=0)
+    mat = with_vals[:height,:width].tolist()
+    axis.imshow(mat, cmap=cmap)
+
+def print_problem(train_inputs, train_outputs, test_inputs, test_outputs, show_solution=False):
+    n_train = train_inputs.shape[0]
+    n_test = test_inputs.shape[0]
+    fig, axs = plt.subplots(n_train+n_test, 2)
+    for i in range(n_train):
+        print_grid(train_inputs[i,:,:], axs[i,0])
+        axs[i,0].set_axis_off()
+        print_grid(train_outputs[i,:,:], axs[i,1])
+        axs[i,1].set_axis_off()
+    for i in range(n_test):
+        print_grid(test_inputs[i,:,:], axs[n_train+i,0])
+        axs[n_train+i,0].set_axis_off()
+        if show_solution:
+            print_grid(test_outputs[i,:,:], axs[n_train+i,1])
+        axs[n_train+i,1].set_axis_off()
+    return fig
