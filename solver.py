@@ -7,16 +7,17 @@ import torch.nn.functional as F
 DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
 class SolvingModel(nn.Module):
-    def __init__(self, encoder, size):
+    def __init__(self, encoder, size, kernel, dropout):
         super().__init__()
         self.encoder = encoder
-        self.fc = nn.Linear(encoder.out_size, size)
+        self.conv = nn.Conv2d(encoder.out_size, size, kernel, padding="same")
         self.final = nn.Linear(size, data.NUM_VALUES)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        encoded = self.encoder(x).permute([0,2,3,1])
-        hidden = F.relu(self.fc(encoded))
-        y = self.final(hidden)
+        encoded = self.encoder(x)
+        hidden = F.relu(self.dropout(self.conv(encoded)))
+        y = self.final(hidden.permute([0,2,3,1]))
         return y.permute([0,3,1,2])
 
 def train_mini_model(train_inputs, train_outputs, model, n_epochs=10, lr=0.001, l2=0.01):
