@@ -112,7 +112,7 @@ def print_grid(grid, axis, cmap=CMAP):
     width = int(has_values.sum(dim=1).max().item())
     with_vals = grid.argmax(dim=0)
     mat = with_vals[:height,:width].tolist()
-    axis.imshow(mat, cmap=cmap)
+    axis.imshow(mat, cmap=cmap, vmin=0, vmax=NUM_VALUES-1)
 
 def print_problem(train_inputs, train_outputs, test_inputs, test_outputs, show_solution=False):
     n_train = train_inputs.shape[0]
