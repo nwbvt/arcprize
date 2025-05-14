@@ -13,12 +13,12 @@ NUM_VALUES=10
 
 def one_hot_tensor(in_grid):
     """Transform the grid into a (max_x, max_y, num_values) sized one hot tensor"""
-    in_tensor = torch.tensor(in_grid, dtype=torch.long)
+    in_tensor = torch.tensor(in_grid, dtype=torch.long)+1
     in_x, in_y = in_tensor.shape
-    one_hot = F.one_hot(in_tensor, NUM_VALUES).permute((2,0,1))
-    padded_tensor = torch.zeros((NUM_VALUES, MAX_X, MAX_Y), dtype=torch.long)
-    padded_tensor[:, 0:in_x, 0:in_y] = one_hot
-    return padded_tensor.to(torch.float32)
+    padded_tensor = torch.zeros((MAX_X, MAX_Y), dtype=torch.long)
+    padded_tensor[0:in_x, 0:in_y] = in_tensor
+    one_hot = F.one_hot(padded_tensor, NUM_VALUES+1).permute((2,0,1))
+    return one_hot.to(torch.float32)
 
 class ArcData(Dataset):
 
@@ -103,16 +103,16 @@ class ArcTriplets(Dataset):
     def __getitem__(self, idx):
         return self.triplets[idx].gen_triplet(self.challenges)
 
-CMAP = colors.ListedColormap(['#000000', '#0074D9', '#FF4136', '#2ECC40', '#FFDC00',
+CMAP = colors.ListedColormap(['#FFFFFF', '#000000', '#0074D9', '#FF4136', '#2ECC40', '#FFDC00',
                               '#AAAAAA', '#F012BE', '#FF851B', '#7FDBFF', '#870C25'])
 
 def print_grid(grid, axis, cmap=CMAP):
-    has_values = grid.sum(dim=0)
+    has_values = grid[0] == 0
     height = int(has_values.sum(dim=0).max().item())
     width = int(has_values.sum(dim=1).max().item())
     with_vals = grid.argmax(dim=0)
     mat = with_vals[:height,:width].tolist()
-    axis.imshow(mat, cmap=cmap, vmin=0, vmax=NUM_VALUES-1)
+    axis.imshow(mat, cmap=cmap, vmin=0, vmax=NUM_VALUES)
 
 def print_problem(train_inputs, train_outputs, test_inputs, test_outputs, show_solution=False):
     n_train = train_inputs.shape[0]

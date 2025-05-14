@@ -12,7 +12,7 @@ class Encoding(nn.Module):
     def __init__(self, channels, kernels):
         super().__init__()
         self.layers = nn.ModuleList()
-        in_size = d.NUM_VALUES
+        in_size = d.NUM_VALUES + 1
         for channel, kernel in zip(channels, kernels):
             self.layers.append(nn.Conv2d(in_channels=in_size, out_channels=channel,
                                          kernel_size=kernel, padding="same"))

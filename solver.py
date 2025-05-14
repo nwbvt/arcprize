@@ -11,7 +11,7 @@ class SolvingModel(nn.Module):
         super().__init__()
         self.encoder = encoder
         self.conv = nn.Conv2d(encoder.out_size, size, kernel, padding="same")
-        self.final = nn.Linear(size, data.NUM_VALUES)
+        self.final = nn.Linear(size, data.NUM_VALUES+1)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
