@@ -107,11 +107,11 @@ CMAP = colors.ListedColormap(['#FFFFFF', '#000000', '#0074D9', '#FF4136', '#2ECC
                               '#AAAAAA', '#F012BE', '#FF851B', '#7FDBFF', '#870C25'])
 
 def print_grid(grid, axis, cmap=CMAP):
-    has_values = grid[0] == 0
+    val_grid = grid.argmax(dim=0)
+    has_values = val_grid > 0
     height = int(has_values.sum(dim=0).max().item())
     width = int(has_values.sum(dim=1).max().item())
-    with_vals = grid.argmax(dim=0)
-    mat = with_vals[:height,:width].tolist()
+    mat = val_grid[:height,:width].tolist()
     axis.imshow(mat, cmap=cmap, vmin=0, vmax=NUM_VALUES)
 
 def print_problem(train_inputs, train_outputs, test_inputs, test_outputs, show_solution=False):

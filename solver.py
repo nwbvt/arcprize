@@ -32,7 +32,7 @@ def train_mini_model(train_inputs, train_outputs, model, n_epochs=10, lr=0.001, 
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        accuracy = (1-((preds.softmax(dim=1) > 0.5).to(torch.long) - train_outputs).abs().mean())*100
-        print(f"loss: {loss:>7f}, accuracy: {accuracy:>5f}% [{i+1}/{n_epochs}]", end="\r")
+        accuracy = (preds.argmax(dim=1) == train_outputs.argmax(dim=1)).to(torch.float).mean()*100
+        print(f"loss: {loss:>7f}, accuracy: {accuracy:>.2f}% [{i+1}/{n_epochs}]", end="\r")
 
 
