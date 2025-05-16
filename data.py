@@ -51,6 +51,41 @@ class ArcData(Dataset):
         return (torch.stack(train_inputs), torch.stack(train_outputs),
                 torch.stack(test_inputs), torch.stack(test_outputs))
 
+MAX_EXAMPLES=10
+@dataclass
+class SequenceLocation:
+    data_idx: str
+    test_idx: int
+
+class ArcSequence(Dataset):
+
+    def __init__(self, data_folder, prefix):
+        super().__init__()
+        with open(f'{data_folder}/{prefix}_challenges.json') as f:
+            self.challenges = json.load(f)
+        with open(f'{data_folder}/{prefix}_solutions.json') as f:
+            self.solutions = json.load(f)
+        problems = list(self.challenges.keys())
+        self.sequence_locations = []
+        for problem in problems:
+            for test in range(len(self.challenges[problem]['test'])):
+                self.sequence_locations.append(SequenceLocation(problem, test))
+
+    def __len__(self):
+        return len(self.sequence_locations)
+
+    def __getitem__(self, idx):
+        location = self.sequence_locations[idx]
+        challenge = self.challenges[location.data_idx]
+        solution = self.solutions[location.data_idx]
+        x = torch.zeros(2*MAX_EXAMPLES+1, NUM_VALUES+1, MAX_X, MAX_Y)
+        for i, example in enumerate(challenge['train']):
+            x[2*i,:,:,:] = one_hot_tensor(example['input'])
+            x[2*i+1,:,:,:] = one_hot_tensor(example['output'])
+        x[-1,:,:,:] = one_hot_tensor(challenge['test'][location.test_idx]['input'])
+        y = one_hot_tensor(solution[location.test_idx])
+        return x,y
+
 @dataclass
 class TripletLocation:
     data_idx: str
