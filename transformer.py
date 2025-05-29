@@ -6,8 +6,15 @@ from einops import rearrange
 import data as d
 import torch.nn.functional as F
 from positional_encodings.torch_encodings import PositionalEncoding3D
+import time
+import random
 
 DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+
+def init_seed(seed):
+    generator = torch.Generator().manual_seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
 
 class TransformerModel(nn.Module):
     def __init__(self, embedder, d_model, n_head, n_hid, n_layers, dropout=0.5):
@@ -16,10 +23,12 @@ class TransformerModel(nn.Module):
         d_embed = embedder.out_size + data.NUM_VALUES + 1
         self.positional_encoder = PositionalEncoding3D(d_embed)
         self.pre_encode = nn.Linear(d_embed, d_model)
+        torch.nn.init.xavier_uniform_(self.pre_encode.weight)
         transformer_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=n_head, dim_feedforward=n_hid, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(transformer_layer, n_layers, nn.LayerNorm(d_model))
         self.dropout = nn.Dropout(p=dropout)
         self.decoder = nn.Linear(d_model, data.NUM_VALUES+1)
+        torch.nn.init.xavier_uniform_(self.decoder.weight)
 
     def forward(self, x: Tensor) -> Tensor:
         batch, n_seq, n_vals, n_x, n_y = x.shape
@@ -56,7 +65,7 @@ def train_epoch(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module
         if log:
             loss = loss.item()
             current = (i + 1) * len(x)
-            print(f"loss: {loss:>7f}, [{current:>6d}/{size:>6d}]", end="\r")
+            print(f"loss: {loss:>7f}, [{current:>4d}/{size:>4d}]", end="\r")
 
 def test(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module, batch_size: int=4, device: str=DEVICE):
     model.eval()
@@ -74,18 +83,14 @@ def test(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module, batch
 
 def train(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module, optimizer: optim.Optimizer,
           name: str="transformer_model", max_epochs: int=100, max_streak: int=5,
-          seed: int=0, device: str=DEVICE, train_size: float=0.9,
-          batch_size:int=4, log:bool=True):
+          device: str=DEVICE, train_size: float=0.9, batch_size:int=4, log:bool=True):
     fname=f"{name}.pth"
     generator = None
-    if seed:
-        generator = torch.Generator().manual_seed(seed)
-        torch.manual_seed(seed)
-        random.seed(seed)
     train_data, val_data = torch.utils.data.random_split(data, [train_size, 1-train_size], generator)
     best_loss = test(model, val_data, loss_fn, batch_size, device)
     streak = 0 # Number of times the train loss has not improved
     for i in range(max_epochs):
+        start = time.time()
         train_epoch(model, train_data, loss_fn, optimizer, batch_size, device, log)
         val_loss = test(model, val_data, loss_fn, batch_size, device)
         if val_loss < best_loss:
@@ -94,7 +99,8 @@ def train(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module, opti
         else:
             improved = False
         if log:
-            print(f"Epoch {i:3d}: Loss={val_loss:>3.5f}")
+            total_time = time.time()-start
+            print(f"Epoch {i:3d}: Loss={val_loss:>3.5f}, Time={int(total_time//60)} minutes, {(total_time%60):>3.2f} seconds")
         if improved:
             streak = 0
             torch.save(model.state_dict(), fname)
