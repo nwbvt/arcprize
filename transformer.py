@@ -54,6 +54,7 @@ def train_epoch(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module
     model.train()
     size = len(data)
     loader = DataLoader(data, batch_size=batch_size)
+    start = time.time()
     for i, (x,y) in enumerate(loader):
         x = x.to(device)
         y = y.to(device)
@@ -65,7 +66,9 @@ def train_epoch(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module
         if log:
             loss = loss.item()
             current = (i + 1) * len(x)
-            print(f"loss: {loss:>7f}, [{current:>4d}/{size:>4d}]", end="\r")
+            elapsed = time.time() - start
+            eta = (elapsed/current)*size - elapsed
+            print(f"loss: {loss:>7f}, [{current:>4d}/{size:>4d}], ETA {int(eta//60):>4d} minutes", end="\r")
 
 def test(model: TransformerModel, data: d.ArcSequence, loss_fn: nn.Module, batch_size: int=4, device: str=DEVICE):
     model.eval()
